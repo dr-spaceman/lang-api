@@ -1,0 +1,42 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# TypeScript compiled output
+dist/
+build/
+
+# dotenv environment variables file
+.env
+
+# IDEs and editors
+/.idea
+*.swp
+*.swo
+.vscode/
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Optional npm cache & logs
+npm-debug.log*
+npm-error.log*
+yarn-debug.log*
+yarn-error.log*
+pnp-debug.log*
+
+# Project-specific examples (could be modified according to your project needs)
+coverage/
+*.log
+*.csv
+*.dat
+*.out
+*.pid
+*.gz
+
+# Various lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
