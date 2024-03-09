@@ -1,4 +1,5 @@
 import bodyParser from 'body-parser'
+import cors, { CorsOptions } from 'cors'
 import express from 'express'
 import rateLimit from 'express-rate-limit'
 import NodeCache from 'node-cache'
@@ -14,6 +15,16 @@ const apiLimiter = rateLimit({
   max: 100, // limit each IP to 100 requests per windowMs
 })
 const myCache = new NodeCache({ stdTTL: 100, checkperiod: 120 })
+const whitelist = ['http://localhost:3000']
+const corsOptions: CorsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || whitelist.indexOf(origin) !== -1) {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  },
+}
 
 app.use(apiLimiter)
 app.use(bodyParser.json())
@@ -56,7 +67,7 @@ router.get('/me', authenticateToken, (req, res) => {
   res.json({ ...user, ...userData })
 })
 
-app.use('/v1', router, authenticateToken)
+app.use('/v1', cors(corsOptions), router)
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`)
