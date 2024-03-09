@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./dist:/app/dist
+      - ./src:/app/src
+      - /node_modules
+    command: npm run dev
+    environment:
+      - ACCESS_TOKEN_SECRET=super_secret_token_secret
