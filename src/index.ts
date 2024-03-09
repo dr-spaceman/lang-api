@@ -1,8 +1,10 @@
+import bodyParser from 'body-parser'
 import express from 'express'
 import rateLimit from 'express-rate-limit'
 import NodeCache from 'node-cache'
-import 'dotenv/config'
-import { authenticateToken } from './middleware/auth-middleware'
+
+import { User, authenticateToken } from './middleware/auth-middleware'
+import login from './routes/vi/login'
 
 const app = express()
 const port = 3000
@@ -14,24 +16,33 @@ const apiLimiter = rateLimit({
 const myCache = new NodeCache({ stdTTL: 100, checkperiod: 120 })
 
 app.use(apiLimiter)
+app.use(bodyParser.json())
 
 app.get('/', (req, res) => {
   res.send('Hello World!')
 })
 
+app.get('/docs', (req, res) => {
+  // TODO
+  res.send('Docs')
+})
+
 // Router for /v1
 
 router.get('/', (req, res) => {
-  res.send('API v1 root')
+  res.send('Welcome to Lang API v1.0')
 })
 
 router.head('/health', (req, res) => {
   res.json({ status: 'ok' })
 })
 
+router.post('/login', login)
+
 router.get('/me', authenticateToken, (req, res) => {
+  const user = res.locals.user as User
   const key = 'user_' + 1
-  let userData = myCache.get(key)
+  let userData: User | undefined = myCache.get(key)
 
   if (!userData) {
     // Fetch data from database
@@ -42,10 +53,10 @@ router.get('/me', authenticateToken, (req, res) => {
     myCache.set(key, userData)
   }
 
-  res.json(userData)
+  res.json({ ...user, ...userData })
 })
 
-app.use('/v1', router)
+app.use('/v1', router, authenticateToken)
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`)

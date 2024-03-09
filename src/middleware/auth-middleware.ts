@@ -1,12 +1,18 @@
-import { Request, Response, NextFunction } from 'express'
+import type { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
 import getEnv from '../utils/get-env'
 
-const ACCESS_TOKEN_SECRET = getEnv('ACCESS_TOKEN_SECRET')
+type User = {
+  id: number
+  name: string
+}
+type LocalsAuthenticated = {
+  user: User
+}
 
-export const authenticateToken = (
-  req: Request & { user?: any },
-  res: Response,
+const authenticateToken = (
+  req: Request,
+  res: Response<LocalsAuthenticated>,
   next: NextFunction
 ) => {
   const authHeader = req.headers['authorization']
@@ -15,11 +21,15 @@ export const authenticateToken = (
     return res.sendStatus(401)
   }
 
-  jwt.verify(token, ACCESS_TOKEN_SECRET, (err, user) => {
+  jwt.verify(token, getEnv('ACCESS_TOKEN_SECRET'), (err, user) => {
     if (err) {
+      console.error(err)
       return res.sendStatus(403)
     }
-    req.user = user
+    res.locals.user = user as User
     next()
   })
 }
+
+export type { LocalsAuthenticated, User }
+export { authenticateToken }
