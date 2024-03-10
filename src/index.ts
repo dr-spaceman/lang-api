@@ -28,8 +28,12 @@ const corsOptions: CorsOptions = {
   },
 }
 
+app.set('trust proxy', 1)
+
 app.use(apiLimiter)
 app.use(bodyParser.json())
+
+app.get('/ip', (request, response) => response.send(request.ip))
 
 app.get('/', (req, res) => {
   res.send('Hello World!')
