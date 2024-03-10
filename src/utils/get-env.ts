@@ -1,5 +1,8 @@
-function getEnv(key: string): string {
-  const value = process.env[key]
+function getEnv(
+  key: string,
+  keyDefault: string | undefined = undefined
+): string {
+  const value = process.env[key] || keyDefault
 
   if (!value) {
     throw new Error(`Missing environment variable ${key}`)

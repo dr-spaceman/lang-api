@@ -51,7 +51,7 @@ async function login(request: Request, response: Response) {
       console.error(err)
       return response.sendStatus(403)
     }
-    console.log('verified user', user)
+    console.log('verified user token', user)
   })
   // const refreshToken = escape(
   //   JwtUtil.signRefreshToken({ userId, username, email, password })
@@ -76,7 +76,7 @@ async function login(request: Request, response: Response) {
   response.json({
     accessToken,
     // refreshToken,
-    userId,
+    user: { id: userId, username },
   })
 }
 
