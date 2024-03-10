@@ -6,16 +6,17 @@ import NodeCache from 'node-cache'
 
 import { User, authenticateToken } from './middleware/auth-middleware'
 import login from './routes/vi/login'
+import getEnv from './utils/get-env'
 
 const app = express()
-const port = 3000
+const port = Number(getEnv('PORT', '3333'))
 const router = express.Router()
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
 })
 const myCache = new NodeCache({ stdTTL: 100, checkperiod: 120 })
-const whitelist = ['http://localhost:3000']
+const whitelist = ['http://localhost:3000', 'https://vietnamease.vercel.app']
 const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
     if (!origin || whitelist.indexOf(origin) !== -1) {
