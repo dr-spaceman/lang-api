@@ -1,5 +1,6 @@
 import bodyParser from 'body-parser'
 import cors, { CorsOptions } from 'cors'
+import 'dotenv/config'
 import express from 'express'
 import rateLimit from 'express-rate-limit'
 import NodeCache from 'node-cache'

@@ -11,6 +11,3 @@ services:
       - ./src:/app/src
       - /node_modules
     command: npm run dev
-    environment:
-      - ACCESS_TOKEN_SECRET=super_secret_token_secret
-      - PORT=3333
