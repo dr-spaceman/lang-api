@@ -59,7 +59,7 @@ router.head('/health', (req, res) => {
   res.json({ status: 'ok' })
 })
 
-router.post('/login', login)
+router.post('/login', (req, res) => res.send('login'))
 
 router.get('/me', authenticateToken, (req, res) => {
   const user = res.locals.user as User
