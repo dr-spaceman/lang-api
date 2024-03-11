@@ -14,7 +14,8 @@ const port = Number(getEnv('PORT', '3333'))
 const router = express.Router()
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 20, // limit each IP to 100 requests per windowMs
+  skipSuccessfulRequests: true,
 })
 const myCache = new NodeCache({ stdTTL: 100, checkperiod: 120 })
 const whitelist = ['http://localhost:3000', 'https://vietnamease.vercel.app']
@@ -28,7 +29,7 @@ const corsOptions: CorsOptions = {
   },
 }
 
-app.set('trust proxy', 6)
+// app.set('trust proxy', 6)
 
 app.use(apiLimiter)
 app.use(bodyParser.json())
