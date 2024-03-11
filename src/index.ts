@@ -31,7 +31,7 @@ const corsOptions: CorsOptions = {
 
 // app.set('trust proxy', 6)
 
-app.use(apiLimiter)
+// app.use(apiLimiter)
 app.use(bodyParser.json())
 
 // Debugging
