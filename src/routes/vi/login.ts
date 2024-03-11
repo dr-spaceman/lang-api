@@ -10,7 +10,7 @@ function invalidCredentials(
   res.status(401).send({ error: msg, code: 401 })
 }
 
-async function login(request: Request, response: Response) {
+function login(request: Request, response: Response) {
   if (!request.body) {
     invalidCredentials(request, response, `Missing request body`)
     return

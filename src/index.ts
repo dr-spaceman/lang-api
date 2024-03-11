@@ -5,7 +5,8 @@ import express from 'express'
 import rateLimit from 'express-rate-limit'
 import NodeCache from 'node-cache'
 
-import { User, authenticateToken } from './middleware/auth-middleware'
+import { type User, authenticateToken } from './middleware/auth-middleware'
+import { errorHandler } from './middleware/error-middleware'
 import login from './routes/vi/login'
 import getEnv from './utils/get-env'
 
@@ -31,7 +32,7 @@ const corsOptions: CorsOptions = {
 
 // app.set('trust proxy', 6)
 
-// app.use(apiLimiter)
+app.use(apiLimiter)
 app.use(bodyParser.json())
 
 // Debugging
@@ -59,7 +60,7 @@ router.head('/health', (req, res) => {
   res.json({ status: 'ok' })
 })
 
-router.post('/login', (req, res) => res.send('login'))
+router.post('/login', login)
 
 router.get('/me', authenticateToken, (req, res) => {
   const user = res.locals.user as User
@@ -79,6 +80,11 @@ router.get('/me', authenticateToken, (req, res) => {
 })
 
 app.use('/v1', cors(corsOptions), router)
+
+app.get('/error', (req, res) => {
+  throw new Error('Test error')
+})
+app.use(errorHandler)
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`)
