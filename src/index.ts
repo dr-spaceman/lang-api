@@ -7,7 +7,7 @@ import NodeCache from 'node-cache'
 
 import { type User, authenticateToken } from './middleware/auth-middleware'
 import { errorHandler } from './middleware/error-middleware'
-import login from './routes/vi/login'
+import login from './routes/v1/login'
 import getEnv from './utils/get-env'
 
 const app = express()
@@ -36,10 +36,10 @@ app.use(apiLimiter)
 app.use(bodyParser.json())
 
 // Debugging
-app.get('/ip', (request, response) => response.send(request.ip))
-app.get('/x-forwarded-for', (request, response) =>
-  response.send(request.headers['x-forwarded-for'])
-)
+// app.get('/ip', (request, response) => response.send(request.ip))
+// app.get('/x-forwarded-for', (request, response) =>
+//   response.send(request.headers['x-forwarded-for'])
+// )
 
 app.get('/', (req, res) => {
   res.send('Hello World!')
@@ -81,9 +81,9 @@ router.get('/me', authenticateToken, (req, res) => {
 
 app.use('/v1', cors(corsOptions), router)
 
-app.get('/error', (req, res) => {
-  throw new Error('Test error')
-})
+// app.get('/error', (req, res) => {
+//   throw new Error('Test error')
+// })
 app.use(errorHandler)
 
 app.listen(port, () => {

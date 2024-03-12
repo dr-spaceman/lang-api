@@ -10,6 +10,11 @@ type LocalsAuthenticated = {
   user: User
 }
 
+/**
+ * Require a valid JWT token to be present in the request headers
+ *
+ * @returns res.locals.user {User} - The user object from the JWT
+ */
 const authenticateToken = (
   req: Request,
   res: Response<LocalsAuthenticated>,
