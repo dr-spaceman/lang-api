@@ -9,6 +9,7 @@ import { type User, authenticateToken } from './middleware/auth-middleware'
 import { errorHandler } from './middleware/error-middleware'
 import login from './routes/v1/login'
 import getEnv from './utils/get-env'
+import { getDb } from './db'
 
 const app = express()
 const port = Number(getEnv('PORT', '3333'))
@@ -50,6 +51,21 @@ app.get('/docs', (req, res) => {
   res.send('Docs')
 })
 
+app.get('/foo', (req, res, next) => {
+  getDb().then(db => {
+    db.collection<{ _id: string }>('foo')
+      .findOneAndUpdate(
+        { _id: 'foo' },
+        { $inc: { numFoos: 1 } },
+        { upsert: true, returnDocument: 'after' }
+      )
+      .then(result => {
+        res.json(result)
+      })
+      .catch(next)
+  })
+})
+
 // Router for /v1
 
 router.get('/', (req, res) => {
@@ -78,6 +94,13 @@ router.get('/me', authenticateToken, (req, res) => {
 
   res.json({ ...user, ...userData })
 })
+
+router.get('/translate')
+router.get('/make-cards')
+// Get auth user's cards
+router.get('/cards')
+// Backup auth user's cards
+router.put('/cards')
 
 app.use('/v1', cors(corsOptions), router)
 
