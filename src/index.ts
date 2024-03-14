@@ -10,6 +10,7 @@ import { errorHandler } from './middleware/error-middleware'
 import login from './routes/v1/login'
 import getEnv from './utils/get-env'
 import { getDb } from './db'
+import { AppError } from './utils/error'
 
 const app = express()
 const port = Number(getEnv('PORT', '3333'))
@@ -49,6 +50,16 @@ app.get('/', (req, res) => {
 app.get('/docs', (req, res) => {
   // TODO
   res.send('Docs')
+})
+
+// Tests
+
+app.get('/test-error', async (req, res, next) => {
+  try {
+    throw new AppError('Test error', 400)
+  } catch (err) {
+    next(err)
+  }
 })
 
 app.get('/foo', (req, res, next) => {

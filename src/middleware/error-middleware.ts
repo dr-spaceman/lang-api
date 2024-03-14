@@ -1,6 +1,7 @@
 import { ErrorRequestHandler } from 'express'
+import { AppError } from '../utils/error'
 
-const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
+const errorHandler: ErrorRequestHandler = (err: AppError, req, res, next) => {
   console.error('errorHandler', err.stack)
 
   const statusCode = err.statusCode || 500
