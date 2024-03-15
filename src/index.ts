@@ -7,7 +7,7 @@ import NodeCache from 'node-cache'
 
 import { type User, authenticateToken } from './middleware/auth-middleware'
 import { errorHandler } from './middleware/error-middleware'
-import login from './routes/v1/login'
+import { login, register } from './routes/v1'
 import getEnv from './utils/get-env'
 import { getDb } from './db'
 import { AppError } from './utils/error'
@@ -88,6 +88,8 @@ router.head('/health', (req, res) => {
 })
 
 router.post('/login', login)
+
+router.post('/users', register)
 
 router.get('/me', authenticateToken, (req, res) => {
   const user = res.locals.user as User
