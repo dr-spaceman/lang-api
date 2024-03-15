@@ -83,7 +83,12 @@ async function login(request: Request, response: Response, next: NextFunction) {
     response.json({
       accessToken,
       // refreshToken,
-      user: { id: user.id, email: user.email },
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
     })
   } catch (e) {
     next(e)

@@ -30,7 +30,7 @@ const usersSeed = [
     email: 'gustavo_almodovar@foo.bar',
     emailVerified: new Date(),
     password: '$2b$10$WlIh0R5y/WQmcds7WtJWFudTPITswJ5VvIZjW0UGrr31i4LTjC14q',
-    role: 'customer',
+    role: 'user',
     name: 'Gustavo Almodovar',
     createdAt: new Date(),
     lastLoginAt: new Date(),

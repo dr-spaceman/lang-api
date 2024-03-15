@@ -75,7 +75,7 @@ async function register(
     response.json({
       accessToken,
       // refreshToken,
-      user: { id: user.id, email },
+      user: { id: user.id, email, name, role: user.role },
     })
   } catch (e) {
     next(e)
