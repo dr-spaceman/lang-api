@@ -1,19 +1,15 @@
 import type { Request, Response, NextFunction } from 'express'
-import jwt from 'jsonwebtoken'
-import getEnv from '../utils/get-env'
+import jwt from '../utils/jwt'
+import { SessionUser } from '../interfaces/user'
 
-type User = {
-  id: number
-  name: string
-}
 type LocalsAuthenticated = {
-  user: User
+  user: SessionUser
 }
 
 /**
  * Require a valid JWT token to be present in the request headers
  *
- * @returns res.locals.user {User} - The user object from the JWT
+ * @returns res.locals.user {SessionUser} - The user object from the JWT
  */
 const authenticateToken = (
   req: Request,
@@ -26,15 +22,15 @@ const authenticateToken = (
     return res.sendStatus(401)
   }
 
-  jwt.verify(token, getEnv('ACCESS_TOKEN_SECRET'), (err, user) => {
-    if (err) {
-      console.error(err)
-      return res.sendStatus(403)
-    }
-    res.locals.user = user as User
+  try {
+    const user = jwt.verify(token)
+    res.locals.user = user
     next()
-  })
+  } catch (e) {
+    console.error(e)
+    return res.sendStatus(403)
+  }
 }
 
-export type { LocalsAuthenticated, User }
+export type { LocalsAuthenticated }
 export { authenticateToken }

@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt'
 import type { NextFunction, Request, Response } from 'express'
 
-import type { User } from '../../interfaces/user'
+import type { Session, User } from '../../interfaces/user'
 import { AppError } from '../../utils/error'
 import { getDb, getNextSequence } from '../../db'
 import { processLogin } from './login'
@@ -34,16 +34,13 @@ async function register(
 
     const db = await getDb()
 
-    let user: User
-    let accessToken: string
+    let session: Session
 
     // Get user, if exists
     const existingUser = await db.collection<User>('users').findOne({ email })
     if (existingUser) {
       try {
-        const loginRes = await processLogin(email, password)
-        user = loginRes.user
-        accessToken = loginRes.accessToken
+        session = await processLogin(email, password)
       } catch (e) {
         throw new RegistrationError(`User with email ${email} already exists`)
       }
@@ -57,6 +54,7 @@ async function register(
         password: passwordHash,
         name,
         role: 'user',
+        usage: { tokens: 0 },
         lastLoginAt: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -66,17 +64,11 @@ async function register(
         throw new RegistrationError(`Failed to create user`)
       }
 
-      const loginRes = await processLogin(email, password)
-      user = loginRes.user
-      accessToken = loginRes.accessToken
+      session = await processLogin(email, password)
     }
 
     // Send token(s) response
-    response.json({
-      accessToken,
-      // refreshToken,
-      user: { id: user.id, email, name, role: user.role },
-    })
+    response.json(session)
   } catch (e) {
     next(e)
   }

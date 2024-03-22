@@ -5,12 +5,14 @@ import express from 'express'
 import rateLimit from 'express-rate-limit'
 import NodeCache from 'node-cache'
 
-import { type User, authenticateToken } from './middleware/auth-middleware'
+import { authenticateToken } from './middleware/auth-middleware'
 import { errorHandler } from './middleware/error-middleware'
-import { login, register } from './routes/v1'
+import { login, register, getUsage, putUsage } from './routes/v1'
 import getEnv from './utils/get-env'
 import { getDb } from './db'
 import { AppError } from './utils/error'
+import jwt from './utils/jwt'
+import { SessionUser, User } from './interfaces/user'
 
 const app = express()
 const port = Number(getEnv('PORT', '3333'))
@@ -54,6 +56,15 @@ app.get('/docs', (req, res) => {
 
 // Tests
 
+app.get('/jwt', (req, res, next) => {
+  try {
+    const token = jwt.verify('fuuu')
+    res.json(token)
+  } catch (err) {
+    next(err)
+  }
+})
+
 app.get('/test-error', async (req, res, next) => {
   try {
     throw new AppError('Test error', 400)
@@ -91,22 +102,36 @@ router.post('/login', login)
 
 router.post('/users', register)
 
-router.get('/me', authenticateToken, (req, res) => {
-  const user = res.locals.user as User
-  const key = 'user_' + 1
-  let userData: User | undefined = myCache.get(key)
+router.get('/me', authenticateToken, async (req, res, next) => {
+  try {
+    const user = res.locals.user as SessionUser
+    const key = 'user_' + user.id
+    let userData: User | undefined = myCache.get(key)
 
-  if (!userData) {
-    // Fetch data from database
-    userData = {
-      id: 1,
-      name: 'Gustavo Almodovar',
+    if (!userData) {
+      const db = await getDb()
+      const foundUser = await db
+        .collection<User>('users')
+        .findOne({ id: user.id })
+      if (!foundUser) {
+        throw new AppError('User not found', 404)
+      }
+      userData = foundUser
+      myCache.set(key, userData)
     }
-    myCache.set(key, userData)
-  }
 
-  res.json({ ...user, ...userData })
+    res.json({ ...user, ...userData })
+  } catch (e) {
+    next(e)
+  }
 })
+
+// Get auth user's usage
+router.get('/usage', authenticateToken, getUsage)
+// Get specific user's usage
+router.get('/usage/:userId', authenticateToken, getUsage)
+// Register new usage
+router.put('/usage', putUsage)
 
 router.get('/translate')
 router.get('/make-cards')

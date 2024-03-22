@@ -1,16 +1,15 @@
 import bcrypt from 'bcrypt'
 import type { NextFunction, Request, Response } from 'express'
-import jwt from 'jsonwebtoken'
 
-import type { User } from '../../interfaces/user'
-import { AppError, InvalidCredentialsError } from '../../utils/error'
-import getEnv from '../../utils/get-env'
+import type { Session, SessionUser, User } from '../../interfaces/user'
+import { InvalidCredentialsError } from '../../utils/error'
+import jwt from '../../utils/jwt'
 import { getDb } from '../../db'
 
 async function processLogin(
   email: User['email'],
   password: User['password']
-): Promise<{ user: User; accessToken: string }> {
+): Promise<Session> {
   const db = await getDb()
 
   // Get user, if exists
@@ -19,8 +18,6 @@ async function processLogin(
     throw new InvalidCredentialsError('User does not exist')
   }
   // console.log('found user', user)
-  const updatedUser: User = { ...user, lastLoginAt: new Date() }
-  await db.collection<User>('users').updateOne({ email }, { $set: updatedUser })
 
   // Validate password
   const validPassword = await bcrypt.compare(password, user?.password || '')
@@ -28,18 +25,19 @@ async function processLogin(
     throw new InvalidCredentialsError('Invalid password')
   }
 
+  // Update last login
+  const updatedUser: User = { ...user, lastLoginAt: new Date() }
+  await db.collection<User>('users').updateOne({ email }, { $set: updatedUser })
+
   // Generate JWT
-  const accessToken = jwt.sign(
-    { userId: user.id, email, password },
-    getEnv('ACCESS_TOKEN_SECRET')
-  )
-  jwt.verify(accessToken, getEnv('ACCESS_TOKEN_SECRET'), (err, user) => {
-    if (err) {
-      console.error(err)
-      throw new AppError('Invalid token', 403)
-    }
-    console.log('verified user token', user)
-  })
+  const tokenData: SessionUser = {
+    id: user.id,
+    email,
+    name: user.name,
+    role: user.role,
+  }
+  const accessToken = jwt.sign(tokenData)
+
   // const refreshToken = escape(
   //   JwtUtil.signRefreshToken({ userId, email, email, password })
   // )
@@ -59,7 +57,14 @@ async function processLogin(
   //   [userId]
   // )
 
-  return { user, accessToken }
+  const userSession = {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+  }
+
+  return { accessToken, user: userSession }
 }
 
 async function login(request: Request, response: Response, next: NextFunction) {
