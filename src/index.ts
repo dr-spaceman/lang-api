@@ -5,14 +5,25 @@ import express from 'express'
 import rateLimit from 'express-rate-limit'
 import NodeCache from 'node-cache'
 
-import { authenticateToken } from './middleware/auth-middleware'
+import {
+  authenticateToken,
+  getAuthUser,
+  verifyAdmin,
+} from './middleware/auth-middleware'
 import { errorHandler } from './middleware/error-middleware'
-import { login, register, getUsage, putUsage } from './routes/v1'
+import {
+  login,
+  register,
+  getMyUsage,
+  getUserUsage,
+  putUsage,
+} from './routes/v1'
 import getEnv from './utils/get-env'
 import { getDb } from './db'
 import { AppError } from './utils/error'
 import jwt from './utils/jwt'
 import { SessionUser, User } from './interfaces/user'
+import asyncHandler from './utils/async-handler'
 
 const app = express()
 const port = Number(getEnv('PORT', '3333'))
@@ -56,24 +67,22 @@ app.get('/docs', (req, res) => {
 
 // Tests
 
-app.get('/jwt', (req, res, next) => {
-  try {
+app.get(
+  '/jwt',
+  asyncHandler(async (req, res) => {
     const token = jwt.verify('fuuu')
     res.json(token)
-  } catch (err) {
-    next(err)
-  }
-})
+  })
+)
 
-app.get('/test-error', async (req, res, next) => {
-  try {
+app.get(
+  '/test-error',
+  asyncHandler(async (req, res, next) => {
     throw new AppError('Test error', 400)
-  } catch (err) {
-    next(err)
-  }
-})
+  })
+)
 
-app.get('/foo', (req, res, next) => {
+app.get('/db', (req, res, next) => {
   getDb().then(db => {
     db.collection<{ _id: string }>('foo')
       .findOneAndUpdate(
@@ -90,9 +99,7 @@ app.get('/foo', (req, res, next) => {
 
 // Router for /v1
 
-router.get('/', (req, res) => {
-  res.send('Welcome to Lang API v1.0')
-})
+router.get('/', (req, res) => {})
 
 router.head('/health', (req, res) => {
   res.json({ status: 'ok' })
@@ -104,7 +111,8 @@ router.post('/users', register)
 
 router.get('/me', authenticateToken, async (req, res, next) => {
   try {
-    const user = res.locals.user as SessionUser
+    const user = getAuthUser(req, res, next)
+    console.log('auth user', user)
     const key = 'user_' + user.id
     let userData: User | undefined = myCache.get(key)
 
@@ -127,11 +135,11 @@ router.get('/me', authenticateToken, async (req, res, next) => {
 })
 
 // Get auth user's usage
-router.get('/usage', authenticateToken, getUsage)
+router.get('/usage', authenticateToken, getMyUsage)
 // Get specific user's usage
-router.get('/usage/:userId', authenticateToken, getUsage)
+router.get('/usage/:userId', authenticateToken, verifyAdmin, getUserUsage)
 // Register new usage
-router.put('/usage', putUsage)
+router.put('/usage', authenticateToken, putUsage)
 
 router.get('/translate')
 router.get('/make-cards')

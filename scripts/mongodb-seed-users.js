@@ -21,6 +21,9 @@ const usersSeed = [
     password: '$2b$10$dkmpNm1pzRLfXTHgxVB65OcbqnE5mYIkMoSUzjO3dHugLfVKmI6JS',
     role: 'admin',
     name: 'Matt Berti',
+    usage: {
+      tokens: 0,
+    },
     createdAt: new Date(),
     lastLoginAt: new Date(),
     updatedAt: new Date(),
@@ -32,6 +35,9 @@ const usersSeed = [
     password: '$2b$10$WlIh0R5y/WQmcds7WtJWFudTPITswJ5VvIZjW0UGrr31i4LTjC14q',
     role: 'user',
     name: 'Gustavo Almodovar',
+    usage: {
+      tokens: 0,
+    },
     createdAt: new Date(),
     lastLoginAt: new Date(),
     updatedAt: new Date(),

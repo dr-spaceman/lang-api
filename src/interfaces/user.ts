@@ -16,10 +16,12 @@ export type User = WithId<{
   emailVerified?: Date
   password: string
   role: Role
-  usage: {
-    tokens: number
-  }
+  usage: UserUsage
   lastLoginAt: Date
   createdAt: Date
   updatedAt: Date
 }>
+
+export type UserUsage = {
+  tokens: number
+}
