@@ -22,7 +22,9 @@ import bcrypt from 'bcrypt'
 import type {
   Session,
   SessionDb,
+  SessionUnauthenticated,
   SessionUser,
+  SessionUserUnauthenticated,
   User,
   UserAuthenticated,
   UserUnauthenticated,
@@ -168,7 +170,6 @@ function generateSessionId() {
  */
 const postSession = asyncHandler(async (req, res, next) => {
   const sessionId = generateSessionId()
-  const accessToken = jwt.sign({ sessionId })
 
   const db = await getDb()
   const id = await getNextSequence('users')
@@ -187,7 +188,16 @@ const postSession = asyncHandler(async (req, res, next) => {
     createdAt: new Date(),
   })
 
-  res.json({ accessToken })
+  const user: SessionUserUnauthenticated = {
+    sessionId,
+    isLoggedIn: false,
+    id,
+    role: 'guest',
+  }
+  const accessToken = jwt.sign(user)
+  const data: SessionUnauthenticated = { accessToken, user }
+
+  res.json(data)
 })
 
 export { login, processLogin, postSession }

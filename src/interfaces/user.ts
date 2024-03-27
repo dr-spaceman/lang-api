@@ -2,25 +2,35 @@ import { WithId } from 'mongodb'
 
 export type Role = 'guest' | 'user' | 'admin'
 
-type SessionAuthenticated = {
-  isLoggedIn: true
-  id: UserAuthenticated['id']
-  name: UserAuthenticated['name']
-  email: UserAuthenticated['email']
-  role: UserAuthenticated['role']
-}
-
-type SessionUnauthenticated = {
-  [K in keyof SessionAuthenticated]?: never
-}
-
-export type SessionUser = {
-  sessionId: User['sessionId']
-} & (SessionAuthenticated | SessionUnauthenticated)
-
 export type Session = {
   accessToken: string
   user: SessionUser
+}
+
+export type SessionAuthenticated = Session & { user: SessionUserAuthenticated }
+
+export type SessionUnauthenticated = Session & {
+  user: SessionUserUnauthenticated
+}
+
+export type SessionUser = SessionUserAuthenticated | SessionUserUnauthenticated
+
+export type SessionUserAuthenticated = {
+  id: number
+  sessionId: User['sessionId']
+  isLoggedIn: true
+  name: string
+  email: string
+  role: Role
+}
+
+export type SessionUserUnauthenticated = {
+  id: number
+  sessionId: User['sessionId']
+  isLoggedIn?: false
+  name?: never
+  email?: never
+  role: 'guest'
 }
 
 export type SessionDb = WithId<{
