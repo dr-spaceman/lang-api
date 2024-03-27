@@ -16,31 +16,33 @@ db.users.remove({})
 const usersSeed = [
   {
     id: 1,
+    sessionId: 'test1',
     email: 'mat.berti@gmail.com',
     emailVerified: new Date(),
     password: '$2b$10$dkmpNm1pzRLfXTHgxVB65OcbqnE5mYIkMoSUzjO3dHugLfVKmI6JS',
     role: 'admin',
     name: 'Matt Berti',
-    usage: {
-      tokens: 0,
-    },
     createdAt: new Date(),
     lastLoginAt: new Date(),
     updatedAt: new Date(),
   },
   {
     id: 2,
+    sessionId: 'test2',
     email: 'gustavo_almodovar@foo.bar',
     emailVerified: new Date(),
     password: '$2b$10$WlIh0R5y/WQmcds7WtJWFudTPITswJ5VvIZjW0UGrr31i4LTjC14q',
     role: 'user',
     name: 'Gustavo Almodovar',
-    usage: {
-      tokens: 0,
-    },
     createdAt: new Date(),
     lastLoginAt: new Date(),
     updatedAt: new Date(),
+  },
+  {
+    id: 3,
+    sessionId: 'test3',
+    role: 'guest',
+    createdAt: new Date(),
   },
 ]
 db.users.insertMany(usersSeed)
@@ -52,4 +54,21 @@ db.counters.remove({ _id: 'users' })
 db.counters.insert({ _id: 'users', current: count })
 
 db.users.createIndex({ id: 1 }, { unique: true })
-db.users.createIndex({ email: 1 }, { unique: true })
+db.users.createIndex({ sessionId: 1 }, { unique: true })
+db.users.createIndex({ email: 1 }, { unique: true, sparse: true })
+
+const sessionsSeed = [
+  {
+    sessionId: 'test1',
+    usage: { tokens: 100 },
+    createdAt: new Date(),
+  },
+  {
+    sessionId: 'test2',
+    createdAt: new Date(),
+  },
+]
+db.sessions.remove({})
+db.sessions.insertMany(sessionsSeed)
+db.sessions.createIndex({ sessionId: 1 }, { unique: true })
+print('Inserted', sessionsSeed.length, 'sessions')

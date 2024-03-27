@@ -7,8 +7,8 @@ import NodeCache from 'node-cache'
 
 import {
   authenticateToken,
+  authorizeAdmin,
   getAuthUser,
-  verifyAdmin,
 } from './middleware/auth-middleware'
 import { errorHandler } from './middleware/error-middleware'
 import {
@@ -17,12 +17,13 @@ import {
   getMyUsage,
   getUserUsage,
   putUsage,
+  postSession,
 } from './routes/v1'
 import getEnv from './utils/get-env'
 import { getDb } from './db'
 import { AppError } from './utils/error'
 import jwt from './utils/jwt'
-import { SessionUser, User } from './interfaces/user'
+import { User } from './interfaces/user'
 import asyncHandler from './utils/async-handler'
 
 const app = express()
@@ -105,30 +106,33 @@ router.head('/health', (req, res) => {
   res.json({ status: 'ok' })
 })
 
-router.post('/login', login)
+router.post('/session', postSession)
 
-router.post('/users', register)
+router.post('/login', authenticateToken, login)
+
+router.post('/users', authenticateToken, register)
 
 router.get('/me', authenticateToken, async (req, res, next) => {
   try {
     const user = getAuthUser(req, res, next)
-    console.log('auth user', user)
-    const key = 'user_' + user.id
+    const key = user.sessionId
     let userData: User | undefined = myCache.get(key)
+    console.log('me', { user, userData, cached: !!userData })
 
     if (!userData) {
       const db = await getDb()
       const foundUser = await db
         .collection<User>('users')
-        .findOne({ id: user.id })
+        .findOne({ sessionId: user.sessionId })
       if (!foundUser) {
         throw new AppError('User not found', 404)
       }
       userData = foundUser
       myCache.set(key, userData)
+      console.log('cache', myCache.get(key))
     }
 
-    res.json({ ...user, ...userData })
+    res.json(userData)
   } catch (e) {
     next(e)
   }
@@ -137,22 +141,12 @@ router.get('/me', authenticateToken, async (req, res, next) => {
 // Get auth user's usage
 router.get('/usage', authenticateToken, getMyUsage)
 // Get specific user's usage
-router.get('/usage/:userId', authenticateToken, verifyAdmin, getUserUsage)
+router.get('/usage/:userId', authenticateToken, authorizeAdmin, getUserUsage)
 // Register new usage
 router.put('/usage', authenticateToken, putUsage)
 
-router.get('/translate')
-router.get('/make-cards')
-// Get auth user's cards
-router.get('/cards')
-// Backup auth user's cards
-router.put('/cards')
-
 app.use('/v1', cors(corsOptions), router)
 
-// app.get('/error', (req, res) => {
-//   throw new Error('Test error')
-// })
 app.use(errorHandler)
 
 app.listen(port, () => {

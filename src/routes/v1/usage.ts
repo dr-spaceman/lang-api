@@ -1,30 +1,34 @@
 import { NextFunction, Request, Response } from 'express'
 import { z } from 'zod'
 
-import { SessionUser, User, UserUsage } from '../../interfaces/user'
+import { SessionDb, SessionUser, Usage, User } from '../../interfaces/user'
 import { AppError } from '../../utils/error'
 import asyncHandler from '../../utils/async-handler'
 import { getDb } from '../../db'
 import { getAuthUser } from '../../middleware/auth-middleware'
 
-async function getUsage(userId: User['id']): Promise<UserUsage> {
+async function getUsage(sessionId: User['sessionId']): Promise<Usage> {
   const db = await getDb()
-  const user = await db.collection<User>('users').findOne({ id: userId })
-  if (!user) {
-    throw new AppError('User not found', 404)
+  const sessions = await db.collection<SessionDb>('sessions').find({}).toArray()
+  console.log('sessions', sessions)
+  const session = await db
+    .collection<SessionDb>('sessions')
+    .findOne({ sessionId })
+  if (!session) {
+    throw new AppError('Session ID not found', 404)
   }
 
-  return user.usage
+  return session.usage ?? { tokens: 0 }
 }
 
 /**
  * Get auth user's usage
  *
- * @sends {UserUsage} Auth user's usage
+ * @sends {Usage} Auth user's usage
  */
 const getMyUsage = asyncHandler(async (req, res, next) => {
   const sessionUser = getAuthUser(req, res)
-  const usage = await getUsage(sessionUser.id)
+  const usage = await getUsage(sessionUser.sessionId)
 
   res.send(usage)
 })
@@ -39,7 +43,13 @@ const getUserUsage = asyncHandler(async (req, res) => {
   if (!userId) {
     throw new AppError('Missing userId', 400)
   }
-  const usage = await getUsage(userId)
+  const db = await getDb()
+  const user = await db.collection<User>('users').findOne({ id: userId })
+  if (!user) {
+    throw new AppError('User not found', 404)
+  }
+  console.log('user', user)
+  const usage = await getUsage(user.sessionId)
 
   res.send(usage)
 })
@@ -49,9 +59,9 @@ const getUserUsage = asyncHandler(async (req, res) => {
  *
  * @sends {UserUsage} Updated usage
  */
-async function putUsage(req: Request, res: Response, next: NextFunction) {
-  try {
-    const user = getAuthUser(req, res, next)
+const putUsage = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { sessionId } = getAuthUser(req, res, next)
     try {
       const Body = z.object({
         tokens: z.number(),
@@ -65,21 +75,20 @@ async function putUsage(req: Request, res: Response, next: NextFunction) {
     const tokens = Number(req.body.tokens)
 
     const db = await getDb()
-    const result = await db.collection<User>('users').findOneAndUpdate(
-      { id: user.id },
+    const result = await db.collection<SessionDb>('sessions').findOneAndUpdate(
+      { sessionId },
       {
         $inc: { 'usage.tokens': tokens },
       },
       { returnDocument: 'after' }
     )
+    console.log('result', result)
     if (!result || !result.usage) {
       throw new AppError('Could not update user', 500)
     }
 
     res.send(result.usage)
-  } catch (e) {
-    next(e)
   }
-}
+)
 
 export { getMyUsage, getUserUsage, putUsage }

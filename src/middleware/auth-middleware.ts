@@ -1,8 +1,7 @@
 import type { Request, Response, NextFunction } from 'express'
 import jwt from '../utils/jwt'
-import { SessionUser, User } from '../interfaces/user'
+import { SessionUser } from '../interfaces/user'
 import { AppError } from '../utils/error'
-import asyncHandler from '../utils/async-handler'
 
 type LocalsAuthenticated = {
   user: SessionUser
@@ -26,12 +25,54 @@ const authenticateToken = (
 
   try {
     const user = jwt.verify(token)
+    console.log('token verified')
     res.locals.user = user
     next()
   } catch (e) {
     console.error(e)
+    next(e)
+  }
+}
+
+/**
+ * Middleware to authorize authenticated user
+ *
+ * @requires authenticateToken Requires auth middleware to be called first
+ */
+const authorizeAuthenticatedUser = (
+  req: Request,
+  res: Response<LocalsAuthenticated>,
+  next: NextFunction
+) => {
+  const user = getAuthUser(req, res)
+  if (!user.isLoggedIn) {
+    next(
+      new AppError(
+        'This action required authenticated user; Please sign in.',
+        403
+      )
+    )
+    return
+  }
+
+  console.log('user is authorized!')
+
+  next()
+}
+
+/**
+ * Middleware to authorize only admins
+ *
+ * @requires authenticateToken Requires auth middleware to be called first
+ */
+const authorizeAdmin = (req: Request, res: Response, next: NextFunction) => {
+  const user = getAuthUser(req, res)
+  // console.log('verifyAdmin', user.role === 'admin', user)
+  if (user?.role !== 'admin') {
     return res.sendStatus(403)
   }
+
+  next()
 }
 
 /**
@@ -52,14 +93,10 @@ const getAuthUser = (
   return user
 }
 
-const verifyAdmin = (req: Request, res: Response, next: NextFunction) => {
-  const user = res.locals.user as User
-  // console.log('verifyAdmin', user.role === 'admin', user)
-  if (user.role !== 'admin') {
-    return res.sendStatus(403)
-  }
-  next()
-}
-
 export type { LocalsAuthenticated }
-export { authenticateToken, getAuthUser, verifyAdmin }
+export {
+  authenticateToken,
+  authorizeAdmin,
+  authorizeAuthenticatedUser,
+  getAuthUser,
+}

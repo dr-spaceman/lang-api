@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken'
-import { Session, SessionUser } from '../interfaces/user'
+import { SessionUser } from '../interfaces/user'
 import { AppError } from './error'
 import getEnv from './get-env'
 
@@ -17,7 +17,7 @@ function verify(accessToken: string): SessionUser {
 
     return decoded as SessionUser
   } catch (e) {
-    console.log(e)
+    console.error(e)
     throw new AppError('Invalid token', 403)
   }
 }

@@ -1,11 +1,12 @@
 import bcrypt from 'bcrypt'
-import type { NextFunction, Request, Response } from 'express'
+import z from 'zod'
 
-import type { Session, User } from '../../interfaces/user'
+import type { Session, UserAuthenticated } from '../../interfaces/user'
 import { AppError } from '../../utils/error'
-import { getDb, getNextSequence } from '../../db'
+import { getDb } from '../../db'
 import { processLogin } from './login'
-import { ObjectId } from 'mongodb'
+import asyncHandler from '../../utils/async-handler'
+import { getAuthUser } from '../../middleware/auth-middleware'
 
 export class RegistrationError extends AppError {
   constructor(message: string) {
@@ -13,65 +14,70 @@ export class RegistrationError extends AppError {
   }
 }
 
-async function register(
-  request: Request,
-  response: Response,
-  next: NextFunction
-) {
+const register = asyncHandler(async (request, response) => {
   try {
+    const { sessionId } = getAuthUser(request, response)
+
     if (!request.body) {
-      throw new RegistrationError(`Missing request body`)
+      throw `Missing request body`
     }
     ;['password', 'email', 'name'].forEach(val => {
       if (!request.body[val]) {
-        throw new RegistrationError(`Missing ${val} in request body`)
+        throw `Missing ${val} in request body`
       }
     })
 
-    const email = request.body.email.trim()
-    const password = request.body.password.trim()
-    const name = request.body.name.trim()
+    const email = request.body.email.trim() as string
+    const password = request.body.password.trim() as string
+    const name = request.body.name.trim() as string
+
+    console.log('register', sessionId, email, name)
+
+    // Validate formats
+    try {
+      z.string().email().parse(email)
+    } catch (e) {
+      throw `Invalid email format`
+    }
 
     const db = await getDb()
-
     let session: Session
 
-    // Get user, if exists
-    const existingUser = await db.collection<User>('users').findOne({ email })
+    const existingUser = await db
+      .collection<UserAuthenticated>('users')
+      .findOne({ email })
     if (existingUser) {
+      console.log('existing user', existingUser)
       try {
-        session = await processLogin(email, password)
+        session = await processLogin({ email, password, sessionId })
       } catch (e) {
-        throw new RegistrationError(`User with email ${email} already exists`)
+        throw `Registration error: User with email ${email} may already exist`
       }
     } else {
       const passwordHash = await bcrypt.hash(password, 10)
-      const id = await getNextSequence('users')
-      const newUser: User = {
-        _id: new ObjectId(),
-        id,
+      const user: Partial<UserAuthenticated> = {
         email,
         password: passwordHash,
         name,
         role: 'user',
-        usage: { tokens: 0 },
         lastLoginAt: new Date(),
-        createdAt: new Date(),
         updatedAt: new Date(),
       }
-      const res = await db.collection<User>('users').insertOne(newUser)
-      if (!res.acknowledged) {
-        throw new RegistrationError(`Failed to create user`)
+      const res = await db
+        .collection<UserAuthenticated>('users')
+        .findOneAndUpdate({ sessionId }, { $set: user })
+      if (!res) {
+        throw `Failed to create authenticated user`
       }
 
-      session = await processLogin(email, password)
+      session = await processLogin({ email, password, sessionId })
     }
 
     // Send token(s) response
     response.json(session)
-  } catch (e) {
-    next(e)
+  } catch (e: unknown) {
+    throw new RegistrationError(String(e))
   }
-}
+})
 
 export { register }
