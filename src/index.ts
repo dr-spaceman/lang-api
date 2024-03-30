@@ -8,6 +8,7 @@ import NodeCache from 'node-cache'
 import {
   authenticateToken,
   authorizeAdmin,
+  authorizeAuthenticatedUser,
   getAuthUser,
 } from './middleware/auth-middleware'
 import { errorHandler } from './middleware/error-middleware'
@@ -18,6 +19,7 @@ import {
   getUserUsage,
   putUsage,
   postSession,
+  logout,
 } from './routes/v1'
 import getEnv from './utils/get-env'
 import { getDb } from './db'
@@ -109,6 +111,8 @@ router.head('/health', (req, res) => {
 router.post('/session', postSession)
 
 router.post('/login', authenticateToken, login)
+
+router.post('/logout', authenticateToken, authorizeAuthenticatedUser, logout)
 
 router.post('/users', authenticateToken, register)
 

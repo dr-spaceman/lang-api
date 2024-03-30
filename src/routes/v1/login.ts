@@ -15,6 +15,8 @@
  *  - return accessToken
  * action
  *   - associate usage with sessionId
+ * logout
+ *   - remove user auth data, leaving bare guest data
  */
 
 import bcrypt from 'bcrypt'
@@ -35,6 +37,49 @@ import { getDb, getNextSequence } from '../../db'
 import asyncHandler from '../../utils/async-handler'
 import { ObjectId } from 'mongodb'
 import { getAuthUser } from '../../middleware/auth-middleware'
+
+function generateSessionId() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0,
+      v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
+
+/**
+ * Generate and register a new session ID
+ */
+const postSession = asyncHandler(async (req, res, next) => {
+  const sessionId = generateSessionId()
+
+  const db = await getDb()
+  const id = await getNextSequence('users')
+  await db.collection<UserUnauthenticated>('users').insertOne({
+    _id: new ObjectId(),
+    id,
+    sessionId,
+    role: 'guest',
+    createdAt: new Date(),
+  })
+
+  await db.collection<SessionDb>('sessions').insertOne({
+    _id: new ObjectId(),
+    sessionId,
+    usage: { tokens: 0 },
+    createdAt: new Date(),
+  })
+
+  const user: SessionUserUnauthenticated = {
+    sessionId,
+    isLoggedIn: false,
+    id,
+    role: 'guest',
+  }
+  const accessToken = jwt.sign(user)
+  const data: SessionUnauthenticated = { accessToken, user }
+
+  res.json(data)
+})
 
 async function processLogin({
   email,
@@ -62,6 +107,17 @@ async function processLogin({
     const deletedSession = await db
       .collection<SessionDb>('sessions')
       .findOneAndDelete({ sessionId })
+    if (!deletedSession) {
+      throw new InvalidCredentialsError('Session not found')
+    }
+    const purgedSessionRecord = {
+      ...deletedSession,
+      deletedOn: new Date(),
+      user,
+    }
+    await db
+      .collection<SessionDb>('sessions-purged')
+      .insertOne(purgedSessionRecord)
     console.log('reconcile session for userId', user.id)
     console.log('deleted old session', deletedSession)
     if (deletedSession?.usage.tokens) {
@@ -76,14 +132,6 @@ async function processLogin({
       console.log('no usage to merge')
     }
   }
-  // const session = await db
-  //   .collection<SessionDb>('sessions')
-  //   .findOneAndUpdate(
-  //     { sessionId },
-  //     { $set: { userId: user.id } },
-  //     { upsert: true, returnDocument: 'after' }
-  //   )
-  // console.log('session', session)
 
   // Update last login
   const updatedUser: UserAuthenticated = { ...user, lastLoginAt: new Date() }
@@ -135,6 +183,10 @@ async function processLogin({
 const login = asyncHandler(async (request, response) => {
   const user = getAuthUser(request, response)
 
+  if (user.isLoggedIn) {
+    throw new InvalidCredentialsError(`User is already logged in`)
+  }
+
   if (!request.body) {
     throw new InvalidCredentialsError(`Missing request body`)
   }
@@ -157,47 +209,21 @@ const login = asyncHandler(async (request, response) => {
   response.json(payload)
 })
 
-function generateSessionId() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-    const r = (Math.random() * 16) | 0,
-      v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
-}
-
 /**
- * Generate and register a new session ID
+ * Remove authorized user from session, leaving bare guest credentials
  */
-const postSession = asyncHandler(async (req, res, next) => {
-  const sessionId = generateSessionId()
+const logout = asyncHandler(async (request, response) => {
+  const user = getAuthUser(request, response)
 
-  const db = await getDb()
-  const id = await getNextSequence('users')
-  await db.collection<UserUnauthenticated>('users').insertOne({
-    _id: new ObjectId(),
-    id,
-    sessionId,
-    role: 'guest',
-    createdAt: new Date(),
-  })
-
-  await db.collection<SessionDb>('sessions').insertOne({
-    _id: new ObjectId(),
-    sessionId,
-    usage: { tokens: 0 },
-    createdAt: new Date(),
-  })
-
-  const user: SessionUserUnauthenticated = {
-    sessionId,
-    isLoggedIn: false,
-    id,
+  const tokenData: SessionUserUnauthenticated = {
+    sessionId: user.sessionId,
+    id: user.id,
     role: 'guest',
   }
-  const accessToken = jwt.sign(user)
-  const data: SessionUnauthenticated = { accessToken, user }
+  const accessToken = jwt.sign(tokenData)
+  const newSession: SessionUnauthenticated = { accessToken, user: tokenData }
 
-  res.json(data)
+  response.json(newSession)
 })
 
-export { login, processLogin, postSession }
+export { login, logout, processLogin, postSession }
