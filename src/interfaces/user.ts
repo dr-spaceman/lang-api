@@ -69,3 +69,11 @@ export type UserUnauthenticated = User & UserUnauthenticatedPartial
 export type Usage = {
   tokens: number
 }
+
+export type UsageDb = WithId<{
+  sessionId: string
+  usage: Usage
+  // Misc data
+  meta?: any
+  createdAt: Date
+}>

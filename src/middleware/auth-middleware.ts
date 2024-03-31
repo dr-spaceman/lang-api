@@ -25,7 +25,6 @@ const authenticateToken = (
 
   try {
     const user = jwt.verify(token)
-    console.log('token verified')
     res.locals.user = user
     next()
   } catch (e) {
@@ -55,8 +54,6 @@ const authorizeAuthenticatedUser = (
     return
   }
 
-  console.log('user is authorized!')
-
   next()
 }
 
@@ -69,7 +66,8 @@ const authorizeAdmin = (req: Request, res: Response, next: NextFunction) => {
   const user = getAuthUser(req, res)
   // console.log('verifyAdmin', user.role === 'admin', user)
   if (user?.role !== 'admin') {
-    return res.sendStatus(403)
+    next(new AppError('This action requires admin privileges.', 403))
+    return
   }
 
   next()
