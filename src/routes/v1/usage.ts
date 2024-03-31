@@ -1,7 +1,7 @@
-import { NextFunction, Request, Response } from 'express'
+import { ObjectId } from 'mongodb'
 import { z } from 'zod'
 
-import { SessionDb, SessionUser, Usage, User } from '../../interfaces/user'
+import { SessionDb, Usage, UsageDb, User } from '../../interfaces/user'
 import { AppError } from '../../utils/error'
 import asyncHandler from '../../utils/async-handler'
 import { getDb } from '../../db'
@@ -59,36 +59,43 @@ const getUserUsage = asyncHandler(async (req, res) => {
  *
  * @sends {UserUsage} Updated usage
  */
-const putUsage = asyncHandler(
-  async (req: Request, res: Response, next: NextFunction) => {
-    const { sessionId } = getAuthUser(req, res, next)
-    try {
-      const Body = z.object({
-        tokens: z.number(),
-      })
-      Body.parse(req.body)
-    } catch (e) {
-      console.error(e)
-      throw new AppError(`Missing tokens in request body`, 400)
-    }
-
-    const tokens = Number(req.body.tokens)
-
-    const db = await getDb()
-    const result = await db.collection<SessionDb>('sessions').findOneAndUpdate(
-      { sessionId },
-      {
-        $inc: { 'usage.tokens': tokens },
-      },
-      { returnDocument: 'after' }
-    )
-    console.log('result', result)
-    if (!result || !result.usage) {
-      throw new AppError('Could not update user', 500)
-    }
-
-    res.send(result.usage)
+const putUsage = asyncHandler(async (req, res, next) => {
+  const { sessionId } = getAuthUser(req, res, next)
+  try {
+    const Body = z.object({
+      tokens: z.number(),
+    })
+    Body.parse(req.body)
+  } catch (e) {
+    console.error(e)
+    throw new AppError(`Missing tokens in request body`, 400)
   }
-)
+
+  const tokens = Number(req.body.tokens)
+  const meta = req.body.meta
+  // console.log('putUsage', { sessionId, tokens })
+
+  const db = await getDb()
+  await db.collection<UsageDb>('usage').insertOne({
+    _id: new ObjectId(),
+    sessionId,
+    usage: { tokens },
+    meta,
+    createdAt: new Date(),
+  })
+  const result = await db.collection<SessionDb>('sessions').findOneAndUpdate(
+    { sessionId },
+    {
+      $inc: { 'usage.tokens': tokens },
+    },
+    { returnDocument: 'after' }
+  )
+  // console.log('result', result)
+  if (!result || !result.usage) {
+    throw new AppError('Could not update user', 500)
+  }
+
+  res.send(result.usage)
+})
 
 export { getMyUsage, getUserUsage, putUsage }
