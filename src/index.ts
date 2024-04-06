@@ -5,6 +5,7 @@ import express from 'express'
 import rateLimit from 'express-rate-limit'
 import NodeCache from 'node-cache'
 
+import { User } from './interfaces/user'
 import {
   authenticateToken,
   authorizeAdmin,
@@ -21,12 +22,11 @@ import {
   postSession,
   logout,
 } from './routes/v1'
+import asyncHandler from './utils/async-handler'
 import getEnv from './utils/get-env'
-import { getDb } from './db'
 import { AppError } from './utils/error'
 import jwt from './utils/jwt'
-import { User } from './interfaces/user'
-import asyncHandler from './utils/async-handler'
+import { getDb } from './db'
 
 const app = express()
 const port = Number(getEnv('PORT', '3333'))
