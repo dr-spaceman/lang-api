@@ -37,7 +37,11 @@ const apiLimiter = rateLimit({
   skipSuccessfulRequests: true,
 })
 const myCache = new NodeCache({ stdTTL: 100, checkperiod: 120 })
-const whitelist = ['http://localhost:3000', 'https://vietnamease.vercel.app']
+const whitelist = [
+  'http://localhost:3000',
+  'https://vietnamease.vercel.app',
+  'https://vietnamease-git-bot-drspacemans-projects.vercel.app/api/auth/new', // bot branch
+]
 const corsOptions: CorsOptions = {
   origin: (origin, callback) => {
     if (!origin || whitelist.indexOf(origin) !== -1) {
