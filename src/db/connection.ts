@@ -1,7 +1,7 @@
 import { MongoClient, Db } from 'mongodb'
 import getEnv from '../utils/get-env'
 
-const DB: string = 'lang-dev'
+const DB: string = getEnv('MONGODB_DB')
 const URL: string = getEnv('MONGODB_URL')
 
 let db: Db | null = null
